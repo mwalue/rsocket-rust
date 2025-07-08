@@ -5,6 +5,7 @@ use rsocket_rust::prelude::ServerResponder;
 use rsocket_rust::utils::EchoRSocket;
 use crate::transport::*;
 use crate::payload::PyPayload;
+use crate::py_rsocket::{PyRSocketHandler, PyRSocket};
 
 #[pyclass(name = "MultiTransportServerBuilder")]
 pub struct PyMultiTransportServerBuilder {
@@ -56,12 +57,11 @@ impl PyMultiTransportServerBuilder {
         }
     }
 
-    fn acceptor(mut self_: PyRefMut<Self>, handler: Option<PyObject>) -> PyResult<PyRefMut<Self>> {
+    fn acceptor(mut self_: PyRefMut<Self>, handler: Option<PyRSocketHandler>) -> PyResult<PyRefMut<Self>> {
         if let Some(builder) = self_.inner.take() {
-            let acceptor: ServerResponder = if let Some(_handler) = handler {
+            let acceptor: ServerResponder = if let Some(py_handler) = handler {
                 Box::new(move |_setup, _socket| {
-                    let _py_setup = PyPayload::from_rust(rsocket_rust::prelude::Payload::from(""));
-                    Ok(Box::new(EchoRSocket) as Box<dyn rsocket_rust::prelude::RSocket>)
+                    Ok(Box::new(PyRSocket::new(py_handler.clone())) as Box<dyn rsocket_rust::prelude::RSocket>)
                 })
             } else {
                 Box::new(move |_setup, _socket| {
