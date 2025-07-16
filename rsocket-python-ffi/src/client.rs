@@ -51,7 +51,7 @@ impl PyClient {
         
         future_into_py(py, async move {
             let mut stream = client.request_stream(rust_payload);
-            let mut results = Vec::new();
+            let mut results = Vec::with_capacity(16);
             while let Some(item) = stream.next().await {
                 match item {
                     Ok(payload) => results.push(PyPayload::from_rust(payload)),
@@ -69,7 +69,7 @@ impl PyClient {
         future_into_py(py, async move {
             let stream = futures::stream::iter(rust_payloads.into_iter().map(Ok));
             let mut response_stream = client.request_channel(Box::pin(stream));
-            let mut results = Vec::new();
+            let mut results = Vec::with_capacity(16);
             while let Some(item) = response_stream.next().await {
                 match item {
                     Ok(payload) => results.push(PyPayload::from_rust(payload)),

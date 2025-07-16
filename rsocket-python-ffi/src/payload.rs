@@ -1,4 +1,5 @@
 use pyo3::prelude::*;
+use pyo3::types::PyBytes;
 use rsocket_rust::prelude::{Payload, PayloadBuilder};
 use bytes::Bytes;
 
@@ -34,6 +35,38 @@ impl PyPayload {
         self.inner.metadata().map(|bytes| bytes.to_vec())
     }
 
+    fn data_buffer<'py>(&self, py: Python<'py>) -> Option<Bound<'py, PyBytes>> {
+        self.inner.data().map(|bytes| {
+            PyBytes::new_bound(py, bytes.as_ref())
+        })
+    }
+
+    fn metadata_buffer<'py>(&self, py: Python<'py>) -> Option<Bound<'py, PyBytes>> {
+        self.inner.metadata().map(|bytes| {
+            PyBytes::new_bound(py, bytes.as_ref())
+        })
+    }
+
+    fn data_memoryview<'py>(&self, py: Python<'py>) -> PyResult<Option<Bound<'py, PyAny>>> {
+        if let Some(bytes) = self.inner.data() {
+            let py_bytes = PyBytes::new_bound(py, bytes.as_ref());
+            let memoryview = py.import_bound("builtins")?.getattr("memoryview")?.call1((py_bytes,))?;
+            Ok(Some(memoryview))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn metadata_memoryview<'py>(&self, py: Python<'py>) -> PyResult<Option<Bound<'py, PyAny>>> {
+        if let Some(bytes) = self.inner.metadata() {
+            let py_bytes = PyBytes::new_bound(py, bytes.as_ref());
+            let memoryview = py.import_bound("builtins")?.getattr("memoryview")?.call1((py_bytes,))?;
+            Ok(Some(memoryview))
+        } else {
+            Ok(None)
+        }
+    }
+
     fn data_utf8(&self) -> Option<String> {
         self.inner.data_utf8().map(|s| s.to_string())
     }
@@ -59,6 +92,7 @@ impl PyPayload {
     fn __repr__(&self) -> String {
         self.__str__()
     }
+
 }
 
 impl PyPayload {
